@@ -1,0 +1,24 @@
+# Indic_Agri_Benchmark model config -- Stage 1 (candidate generation)
+# run settings for this model: repo id, backend, and the real runtime
+# args (gpu_memory_utilization, max_model_len, batch_size, gen_kwargs)
+# pulled from its actual results_*.json. Stage 2 (judge) settings for
+# every model are in configs/stage2.yaml; leaderboard scores
+# are in the main README.md.
+model_key: kisanslm-gguf
+rank_by_correctness: 14
+model:
+  repo: prabhu09/KisanSLM-GGUF
+  chat: false
+  backend: gguf
+  gguf_base_url: http://127.0.0.1:8811
+  notes: GGUF-only repo (Q4_K_M, no full-precision safetensors) -- served via a llama.cpp
+    server (scripts/run_kisanslm_gguf.sh) that must already be running; lm_eval talks
+    HTTP to it. chat=False is required, not stylistic -- GGUFLM has no apply_chat_template
+    implementation.
+  stage1_runtime:
+    base_url: http://127.0.0.1:8811
+    batch_size: '1'
+    gen_kwargs:
+      temperature: 0.0
+      top_p: 1.0
+      max_gen_toks: 1024

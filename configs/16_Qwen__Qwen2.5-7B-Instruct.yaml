@@ -1,0 +1,24 @@
+# Indic_Agri_Benchmark model config -- Stage 1 (candidate generation)
+# run settings for this model: repo id, backend, and the real runtime
+# args (gpu_memory_utilization, max_model_len, batch_size, gen_kwargs)
+# pulled from its actual results_*.json. Stage 2 (judge) settings for
+# every model are in configs/stage2.yaml; leaderboard scores
+# are in the main README.md.
+model_key: Qwen__Qwen2.5-7B-Instruct
+rank_by_correctness: 16
+model:
+  repo: Qwen/Qwen2.5-7B-Instruct
+  chat: true
+  backend: vllm
+  notes: Raw HF repo id, not a NAMED_MODELS key -- resolved via resolve_model()'s
+    fallback branch (chat=True assumed).
+  stage1_runtime:
+    gpu_memory_utilization: 0.85
+    max_model_len: 4096
+    dtype: auto
+    enable_prefix_caching: true
+    batch_size: auto
+    gen_kwargs:
+      temperature: 0.0
+      top_p: 1.0
+      max_gen_toks: 1024

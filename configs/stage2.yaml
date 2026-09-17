@@ -1,0 +1,267 @@
+# Indic_Agri_Benchmark model configs -- Stage 2 (judge) run settings
+# for every candidate's evaluation: judge repo/backend and its real
+# runtime args (gpu_memory_utilization, max_model_len, batch_size,
+# gen_kwargs), pulled from each model's actual results_*.json. Keyed
+# by model_key -- see the matching Stage 1 file in configs/ for
+# that candidate's own run settings.
+deepseek-v4-flash:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+gemma-3-27b-it:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+qwen3.6-27b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 16384
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+mistral-small-3.1-24b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.93
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+gemma3-12b-int4:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.93
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_gen_toks: 400
+google__gemma-3-12b-it:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 16384
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+microsoft__phi-4:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+gpt-oss-20b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+llama3.1-8b-instruct:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.93
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_gen_toks: 400
+Qwen__Qwen3-VL-8B-Instruct:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 16384
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+google__gemma-3-4b-it:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+krutrim-1-7b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+sarvam-30b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.9
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_gen_toks: 400
+kisanslm-gguf:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+navarasa-2.0-7b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.93
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_gen_toks: 400
+Qwen__Qwen2.5-7B-Instruct:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+qwen25vl-7b-base:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.9
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+param-1-2.9b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: '16'
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+sarvam-1-2b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.85
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    presence_penalty: 1.5
+    max_gen_toks: 4096
+openhathi-7b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.93
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_gen_toks: 400
+airavata-7b:
+  repo: Qwen/Qwen3.6-35B-A3B-FP8
+  gpu_memory_utilization: 0.93
+  max_model_len: 8192
+  dtype: auto
+  enable_prefix_caching: true
+  batch_size: auto
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_gen_toks: 400

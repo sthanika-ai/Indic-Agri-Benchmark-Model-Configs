@@ -1,0 +1,29 @@
+# Indic_Agri_Benchmark model config -- Stage 1 (candidate generation)
+# run settings for this model: repo id, backend, and the real runtime
+# args (gpu_memory_utilization, max_model_len, batch_size, gen_kwargs)
+# pulled from its actual results_*.json. Stage 2 (judge) settings for
+# every model are in configs/stage2.yaml; leaderboard scores
+# are in the main README.md.
+model_key: mistral-small-3.1-24b
+rank_by_correctness: 4
+model:
+  repo: mistralai/Mistral-Small-3.1-24B-Instruct-2503
+  chat: false
+  backend: vllm
+  lm_eval_bin: venv_blocked_retry/bin/lm_eval
+  env_extra:
+    VLLM_USE_FLASHINFER_SAMPLER: '0'
+    PATH: venv_blocked_retry/bin:{PATH}
+  notes: 'chat=False deliberate: vLLM''s MistralTokenizer has no .chat_template attribute.
+    Flagged as an ''anomaly'' by the user in the comparison table.'
+  stage1_runtime:
+    gpu_memory_utilization: 0.93
+    max_model_len: 4096
+    dtype: auto
+    enable_prefix_caching: true
+    extra_model_args: tokenizer_mode=mistral
+    batch_size: auto
+    gen_kwargs:
+      temperature: 0.0
+      top_p: 1.0
+      max_gen_toks: 1024
