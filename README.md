@@ -1,49 +1,88 @@
-# Indic Agri Benchmark — Model Configs & Leaderboard
+# Indic Agri Benchmark: Model Configs & Leaderboard
 
-Exact run configuration for every candidate model evaluated on
-[Indic-KCC-Agri-Advisory-Benchmark](https://github.com/sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark) —
-open-ended agricultural-advisory question answering in 11 Indian languages, built from real farmer
-questions and the answers given by human agents at India's Kisan Call Centre (KCC).
+Exact run configuration and the full leaderboard for every candidate model evaluated on Indic-KCC-Agri-Advisory-Benchmark, open-ended agricultural-advisory QA in 11 Indian languages.
 
-This repo is the configuration-and-leaderboard companion to the benchmark itself. It answers "what
-was actually run, with what settings" and gives the headline leaderboard — not raw per-row model
-generations or other eval results.
+[![License: MIT](https://img.shields.io/badge/license-MIT-56BF4F?style=flat-square&labelColor=1E281F)](LICENSE)
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20dataset-gated-FFD21E?style=flat-square&labelColor=1E281F)](https://huggingface.co/datasets/sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark)
+[![Benchmark](https://img.shields.io/badge/harness-Indic--KCC--Agri-56BF4F?style=flat-square&labelColor=1E281F&logo=github&logoColor=white)](https://github.com/sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark)
+[![Report](https://img.shields.io/badge/report-sthanika.ai-56BF4F?style=flat-square&labelColor=1E281F&logo=firefox&logoColor=white)](https://sthanika.ai/research/indic-agri-advisory-2026)
 
-**⚠️ Not agronomic advice.** Scores here measure language-model output quality against a QA
-benchmark. Nothing in this repo should be used as real farming guidance.
+> ⚠️ **Not agronomic advice.** Scores here measure language-model output quality against a QA benchmark. Nothing in this repo should be used as real farming guidance.
 
-**21 baseline models evaluated · 500 questions × 11 languages (5,500 rows) on the advisory
-benchmark · 2-stage LLM-judged scoring across 4 axes — full leaderboard below.**
+## What it measures
 
-## What's here
+The benchmark has 500 real Kisan Call Centre (KCC) questions, sampled once in English and translated into 10 other languages, so every language scores the same underlying questions (5,500 rows). This repo is the configuration-and-leaderboard companion: it answers "what was actually run, with what settings" for 21 baseline models, and gives the headline leaderboard. It does not include raw per-row generations or other eval results.
+
+Scoring is two-stage. Stage 1 has the candidate answer 0-shot with greedy decoding. Stage 2 has a separate judge model (never the candidate) score each answer against the reference on four 1–5 axes: correctness, naturalness, groundedness and safety. The two stages are separate `lm-evaluation-harness` passes so the candidate and judge never need to be loaded together. Report: [sthanika.ai](https://sthanika.ai/research/indic-agri-advisory-2026)
 
 ```
 configs/
-  01_*.yaml ... 21_*.yaml   Stage 1 (candidate) run config per model — repo id, backend, real
-                             runtime args (gpu_memory_utilization, max_model_len, batch_size,
-                             gen_kwargs) — one file per candidate on the leaderboard below
+  01_*.yaml ... 21_*.yaml   Stage 1 (candidate) run config per model: repo id, backend, runtime
+                             args (gpu_memory_utilization, max_model_len, batch_size, gen_kwargs)
   stage2.yaml               Stage 2 (judge) run settings for every model, keyed by model_key
 ```
 
-## Leaderboard
+## Quickstart
 
-LLM-judged, 1 (worst)–5 (best), averaged across all 11 languages of the benchmark's `finalised`
-split.
+This repo holds configuration and the leaderboard, not the harness or the dataset. You need the gated corpus, an `lm-evaluation-harness` checkout and this repo's configs together.
 
-- **Correctness** — factual/agronomic accuracy vs. the reference KCC answer
-- **Naturalness** — fluent, idiomatic output in the target language
-- **Groundedness** — no hallucinated doses/product names/timelines
-- **Safety** — 5 unless the answer recommends something dangerous/illegal/banned
-- **Parse OK** — fraction of judge replies that parsed as valid JSON (data-quality signal, not a model-quality metric)
+```bash
+# 1. Dataset (gated; request access first)
+pip install -U huggingface_hub
+huggingface-cli login
+python -c "from huggingface_hub import snapshot_download; snapshot_download(
+    repo_id='sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark', repo_type='dataset',
+    local_dir='data/Indic-KCC-Agri-Advisory-Benchmark')"
 
-### Overall scores, ranked by correctness
+# 2. Eval harness
+git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness.git
+cd lm-evaluation-harness && pip install -e ".[vllm]" && cd ..
 
-| # | Model | Params | Correctness | Naturalness | Groundedness | Safety | Parse OK |
-|---|-------|--------|:---:|:---:|:---:|:---:|:---:|
-| 1 | deepseek-v4-flash | undisclosed (hosted) | **4.29** | 4.38 | 4.67 | 4.60 | 0.98 |
+# link the dataset where the Stage 1 tasks expect it
+mkdir -p lm_eval_data
+for f in data/Indic-KCC-Agri-Advisory-Benchmark/*/finalised_*_test.jsonl; do
+  ln -s "$(pwd)/$f" lm_eval_data/
+done
+
+# 3. Stage 1: generation (take repo, backend and extra args from the model's file in configs/)
+lm_eval --model vllm \
+  --model_args pretrained=google/gemma-3-12b-it,dtype=bfloat16,gpu_memory_utilization=0.85,max_model_len=4096 \
+  --tasks indic_agri_advisory_finalised_hi \
+  --batch_size auto --apply_chat_template --log_samples \
+  --output_path outputs/gemma-3-12b-it/hi
+
+# 4. Stage 2: judging (after converting Stage 1 --log_samples output to the judge's input JSONL)
+lm_eval --model vllm \
+  --model_args pretrained=Qwen/Qwen3.6-35B-A3B-FP8,dtype=bfloat16,gpu_memory_utilization=0.85,max_model_len=8192 \
+  --tasks indic_agri_judge \
+  --batch_size auto \
+  --gen_kwargs temperature=0.7,top_p=0.8,top_k=20,presence_penalty=1.5 \
+  --log_samples \
+  --output_path outputs/judged/gemma-3-12b-it/hi
+```
+
+Repeat steps 3–4 for each model in `configs/`, then fold every model's Stage 2 `results_*.json` into one table keyed by model and averaged across languages.
+
+Notes:
+
+- **Task configs are not checked in.** See `configs/` for per-model run settings and wire them into your own task definitions. Convert Stage 1 output to a flat JSONL with `question`, `reference_answer`, `candidate_answer`, plus `language`, `crop` and `query_type` carried through.
+- **Per-language loading.** `load_dataset("sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark", "Hindi", split="test")` works too. Config names are full language names, not two-letter codes.
+- **Per-model Stage 2 settings** (`gpu_memory_utilization`, `max_model_len`, `gen_kwargs`) are in `configs/stage2.yaml`. Some models used greedy decoding, some the reasoning-safe override above.
+- **Judge sampling is deliberate.** The judge (`Qwen/Qwen3.6-35B-A3B-FP8`) always emits a long "thinking" preamble. The harness default (greedy, `--max_gen_toks=400`) truncates it before the JSON appears, collapsing `parse_ok` to about 0 and every score to the floor. Every Stage 2 run here used the override with `--max_gen_toks 4096`.
+- **Never pass `--num_fewshot > 0`** against `indic_agri_advisory*` tasks. The corpus has no fewshot split without leaking scored rows into the prompt.
+- **Backends.** Every self-hosted model was served via vLLM, except `krutrim-1-7b` and `param-1-2.9b` (HF backend on an older `transformers`, since their custom modeling code vLLM rejects) and `kisanslm-gguf` (GGUF-only, so a llama.cpp server with `lm_eval` talking HTTP to it). `deepseek-v4-flash` is the one hosted API, via `local-chat-completions` with the provider's key in `OPENAI_API_KEY` for that invocation. Hosted APIs use concurrency and capped retries in place of a batch size.
+- **Stage 1 decoding** is greedy: `temperature=0.0`, `top_p=1.0`, `do_sample=false`.
+
+## Results
+
+LLM-judged, 1 (worst) to 5 (best), averaged across all 11 languages of the finalised split. Parse OK is the share of judge replies that parsed as valid JSON, a data-quality signal and not a model-quality metric. Ranked by correctness:
+
+| # | model | params | correctness | naturalness | groundedness | safety | parse OK |
+|---|---|---|---|---|---|---|---|
+| 1 | deepseek-v4-flash | undisclosed (hosted) | 4.29 | 4.38 | 4.67 | 4.60 | 0.98 |
 | 2 | gemma-3-27b-it | 27B | 3.26 | 3.78 | 4.16 | 4.76 | 0.98 |
 | 3 | qwen3.6-27b | 27B | 3.26 | 3.75 | 4.01 | 4.86 | 0.99 |
-| 4 | mistral-small-3.1-24b *(anomaly flagged, see note)* | 24B | 2.54 | 2.66 | 3.33 | 4.63 | 0.99 |
+| 4 | mistral-small-3.1-24b (anomaly flagged) | 24B | 2.54 | 2.66 | 3.33 | 4.63 | 0.99 |
 | 5 | gemma3-12b-int4 (QAT) | 12B | 2.40 | 3.10 | 3.43 | 4.74 | 0.98 |
 | 6 | google/gemma-3-12b-it | 12B | 2.30 | 3.22 | 3.44 | 4.84 | 0.99 |
 | 7 | microsoft/phi-4 | 14B | 2.21 | 2.83 | 2.80 | 4.52 | 0.98 |
@@ -62,22 +101,14 @@ split.
 | 20 | openhathi-7b | 7B | 1.16 | 1.34 | 1.37 | 4.81 | 0.98 |
 | 21 | airavata-7b (Airavata-8bit, OpenHathi-7B base) | 7B | 1.08 | 1.76 | 1.34 | 4.75 | 0.97 |
 
-*mistral-small-3.1-24b's score is flagged in the source report as an anomaly worth re-checking
-(unexpectedly high relative to its correctness-vs-safety profile) — kept here for transparency, not
-as a verified data point.*
+mistral-small-3.1-24b is flagged in the source report as an anomaly worth re-checking (unexpectedly high relative to its correctness-vs-safety profile). It is kept for transparency, not as a verified data point.
 
-deepseek-v4-flash leads the pool by a wide margin (0.7+ pts over the next model). Every model
-scores worse in the 10 non-English languages than in English — the average gap is smallest for
-Hindi (0.32) and largest for Odia (0.95), and **no model closes the gap entirely**; the one
-apparent exception, `google/gemma-3-4b-it`, is simply weak everywhere (1.19 in English, 1.73
-Indic-avg), not strong in Indic languages specifically.
+deepseek-v4-flash leads by a wide margin (0.7+ points over the next model). Every model scores worse in the 10 non-English languages than in English. The one apparent exception, gemma-3-4b-it, is simply weak everywhere (1.19 in English, 1.73 Indic average).
 
-### English vs. Indic-language gap (correctness), sorted by gap ascending
+English vs Indic-language correctness (positive gap means worse in Indic languages), sorted by gap:
 
-Positive gap = model is worse in Indic languages than in English.
-
-| Model | English | Indic avg | Gap |
-|---|:---:|:---:|:---:|
+| model | English | Indic avg | gap |
+|---|---|---|---|
 | google/gemma-3-4b-it | 1.19 | 1.73 | −0.54 |
 | sarvam-30b | 1.54 | 1.51 | +0.03 |
 | krutrim-1-7b | 1.69 | 1.54 | +0.15 |
@@ -100,10 +131,10 @@ Positive gap = model is worse in Indic languages than in English.
 | Qwen/Qwen3-VL-8B-Instruct | 3.32 | 1.56 | +1.75 |
 | Qwen/Qwen2.5-7B-Instruct | 2.93 | 1.16 | +1.77 |
 
-### Per-language gap from English (averaged across all models)
+Average gap from English per language (correctness, across all models):
 
-| Language | Avg gap from English (correctness) |
-|---|:---:|
+| language | gap |
+|---|---|
 | Hindi | 0.32 |
 | Marathi | 0.51 |
 | Bengali | 0.57 |
@@ -115,179 +146,27 @@ Positive gap = model is worse in Indic languages than in English.
 | Malayalam | 0.93 |
 | Odia | 0.95 |
 
-## Methodology
+Scope: this repo does not include raw per-row generations (there is no `results/` folder), other benchmarks run against the same pool, the dataset itself, or our own fine-tuned checkpoints and their configs. Full report: [sthanika.ai](https://sthanika.ai/research/indic-agri-advisory-2026)
 
-### Benchmark
+## Citation
 
-500 questions sampled once in English, translated into 10 other languages, so every language
-scores the same underlying questions.
+If you use this leaderboard or these configurations, cite this repo and the benchmark.
 
-### Two-stage scoring
-
-Open-ended advisory text has no single correct string, so accuracy-style metrics don't apply:
-
-1. **Stage 1 — generation.** The candidate model answers each question, 0-shot, greedy decoding.
-   Per-model run settings live under [`configs/`](configs/).
-2. **Stage 2 — judging.** A separate model (never the same as the candidate) scores each answer
-   against the reference on four 1–5 axes: correctness, naturalness, groundedness, safety.
-
-Generation and judging are run as separate lm-evaluation-harness passes so the candidate and judge
-models don't need to be loaded together, and so a candidate's own quirks (e.g. `gpt-oss`'s
-reasoning-channel markup) can be cleaned before the judge ever sees them.
-
-Every self-hosted model was served via [vLLM](https://github.com/vllm-project/vllm);
-`deepseek-v4-flash` is the one hosted-API candidate, called over its OpenAI-compatible
-chat-completions endpoint.
-
-### Generation defaults
-
-Stage 1 (candidate) generation is **greedy**: `temperature=0.0, top_p=1.0, do_sample=false`.
-Hosted-API candidates use concurrency + capped retries in place of a harness batch size, since
-chat-completion backends force `batch_size=1`.
-
-### Reasoning-model token budgets (judge)
-
-The judge model (`Qwen/Qwen3.6-35B-A3B-FP8`) always emits a long "thinking" preamble before its
-JSON verdict. The harness's bare defaults (greedy, `--max_gen_toks=400`) truncate that preamble
-before the JSON ever appears, collapsing `parse_ok` to ~0 and every score to the floor — every
-Stage-2 run behind this leaderboard instead used `--gen_kwargs
-temperature=0.7,top_p=0.8,top_k=20,presence_penalty=1.5 --max_gen_toks 4096` (see the Stage 2
-command below).
-
-## Reproducing or extending this
-
-This repo holds configuration and the leaderboard, not the harness itself, and not the dataset —
-you need the corpus (gated, on Hugging Face) and this repo's model configs alongside your own
-eval-harness setup.
-
-### 1. Fetch the dataset (Hugging Face, gated)
-
-The benchmark data is gated to protect against public gold answers being memorized into future
-training corpora. Request access, then:
-
-```bash
-pip install -U huggingface_hub
-huggingface-cli login   # paste a token with access to the gated repo
-
-python -c "from huggingface_hub import snapshot_download; snapshot_download(
-    repo_id='sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark', repo_type='dataset',
-    local_dir='data/Indic-KCC-Agri-Advisory-Benchmark')"
+```bibtex
+@software{indic_agri_benchmark_model_configs2026,
+  title  = {Indic Agri Benchmark: Model Configs and Leaderboard},
+  author = {{sthanika-ai}},
+  year   = {2026},
+  url    = {https://github.com/sthanika-ai/Indic-Agri-Benchmark-Model-Configs}
+}
 ```
-
-Or per-language with `datasets`:
-
-```python
-from datasets import load_dataset
-ds = load_dataset("sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark", "Hindi", split="test")
-```
-
-Config names are full language names (`Bengali`, `English`, `Gujarati`, `Hindi`, `Kannada`,
-`Malayalam`, `Marathi`, `Odia`, `Punjabi`, `Tamil`, `Telugu`), not two-letter codes. See the
-harness + methodology repo,
-[`sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark`](https://github.com/sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark),
-for full field documentation.
-
-### 2. Fetch the eval harness (GitHub)
-
-```bash
-git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness.git
-cd lm-evaluation-harness
-pip install -e ".[vllm]"
-cd ..
-```
-
-The task configs the harness needs (Stage 1 generation tasks + the Stage 2 judge task) aren't
-checked into this repo — see [`configs/`](configs/) for the per-model run settings
-(repo id, backend, extra vLLM/HF args) each candidate needs, and wire those into your own
-eval-harness task definitions.
-
-The Stage-1 tasks expect the dataset's `finalised_<lang>_test.jsonl` files at a `lm_eval_data/`
-path relative to where you invoke `lm_eval` — either symlink the downloaded HF dataset there, or
-point your task config's `dataset_kwargs.data_files.test` at wherever you put it:
-
-```bash
-mkdir -p lm_eval_data
-for f in data/Indic-KCC-Agri-Advisory-Benchmark/*/finalised_*_test.jsonl; do
-  ln -s "$(pwd)/$f" lm_eval_data/
-done
-```
-
-### 3. Run a Stage-1 generation pass
-
-Take the `repo`, `backend`, and any `extra_model_args`/`env_extra` from that model's file under
-[`configs/`](configs/) — most models are plain vLLM, but some need a different
-backend entirely (see Notes below):
-
-```bash
-lm_eval --model vllm \
-  --model_args pretrained=google/gemma-3-12b-it,dtype=bfloat16,gpu_memory_utilization=0.85,max_model_len=4096 \
-  --tasks indic_agri_advisory_finalised_hi \
-  --batch_size auto --apply_chat_template --log_samples \
-  --output_path outputs/gemma-3-12b-it/hi
-```
-
-A hosted-API candidate (e.g. `deepseek-v4-flash`) instead uses the harness's built-in
-`local-chat-completions` model type, pointed at the provider's OpenAI-compatible endpoint, with the
-provider's API key copied into `OPENAI_API_KEY` for that invocation.
-
-### 4. Run Stage 2 (judging)
-
-Convert Stage 1's `--log_samples` output (per doc: the original corpus row + `filtered_resps`, the
-candidate's generated answer) into the flat JSONL the judge task's `dataset_kwargs.data_files`
-points at — `question`, `reference_answer`, `candidate_answer`, plus
-`language`/`crop`/`query_type` carried through for aggregation. Then run the judge, using that
-model's entry in [`configs/stage2.yaml`](configs/stage2.yaml) for the exact
-`gpu_memory_utilization`/`max_model_len`/`gen_kwargs` (these vary per model — some used greedy
-decoding, some the reasoning-safe override below):
-
-```bash
-lm_eval --model vllm \
-  --model_args pretrained=Qwen/Qwen3.6-35B-A3B-FP8,dtype=bfloat16,gpu_memory_utilization=0.85,max_model_len=8192 \
-  --tasks indic_agri_judge \
-  --batch_size auto \
-  --gen_kwargs temperature=0.7,top_p=0.8,top_k=20,presence_penalty=1.5 \
-  --log_samples \
-  --output_path outputs/judged/gemma-3-12b-it/hi
-```
-
-### 5. Building the leaderboard across models
-
-Repeat Steps 3–4 for each model in [`configs/`](configs/), then fold every model's
-Stage 2 `results_*.json` into one comparison table, keyed by model, averaged across languages on
-the four judge axes.
-
-### Notes
-
-- All generation is **greedy** (`temperature=0.0, top_p=1.0`, no sampling) for Stage 1. The judge
-  in Step 4 is deliberately **not** greedy — see "Reasoning-model token budgets (judge)" above.
-- Never pass `--num_fewshot > 0` against `indic_agri_advisory*` tasks — the corpus has no fewshot
-  split to draw from without leaking scored rows into the prompt.
-- Some models in `configs/` need a different backend than plain vLLM:
-  `krutrim-1-7b`/`param-1-2.9b` need the HF backend on an older transformers version (custom
-  modeling code vLLM rejects outright); `kisanslm-gguf` is GGUF-only and needs a llama.cpp server,
-  with `lm_eval` talking HTTP to it instead of loading a model in-process. See each model's
-  `notes` field for specifics.
-
-## Scope
-
-This repo deliberately does **not** include:
-- **Raw per-row model generations, or any results beyond the Leaderboard above** — this repo is
-  configs + the headline leaderboard, not a full results archive. No `results/` folder.
-- **Other benchmarks (MMLU/MILU, HumanEval, MT-Bench) run against parts of the same candidate
-  pool, or the dataset's own translation-QC/KCC-answer-review pipelines** — those are separate
-  concerns from showcasing model performance on this benchmark, and aren't documented here.
-- **Our own fine-tuned model checkpoints, their training configs, or their eval results** — this
-  repo documents the baseline/candidate-model evaluation setup, not our fine-tuning work.
-- **The benchmark dataset itself** — gated on Hugging Face, see "Reproducing or extending this"
-  above.
 
 ## License
 
-Code in this repo (configs, scripts) is [MIT](LICENSE)-licensed. It contains no benchmark data and
-no model weights — the dataset is separately licensed and gated, see the
-[benchmark repo](https://github.com/sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark).
+Code (configs, scripts) is MIT, see [LICENSE](LICENSE). This repo contains no benchmark data and no model weights. The dataset is separately licensed and gated, see the benchmark repo.
 
-## Related repositories
+## Related
 
-- [**Indic-KCC-Agri-Advisory-Benchmark**](https://github.com/sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark) — the evaluation harness and methodology
-- [**Indic-KCC-Agri-Advisory-Benchmark dataset**](https://huggingface.co/datasets/sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark) — the corpus itself, on Hugging Face (gated)
+- [Indic-KCC-Agri-Advisory-Benchmark](https://github.com/sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark): the evaluation harness and methodology
+- [Indic-KCC-Agri-Advisory-Benchmark dataset](https://huggingface.co/datasets/sthanika-ai/Indic-KCC-Agri-Advisory-Benchmark): the corpus, on Hugging Face (gated)
+- Site: [sthanika.ai](https://sthanika.ai)
