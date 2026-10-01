@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this leaderboard or these run configurations, please cite it as below."
+title: "Indic Agri Benchmark: Model Configs and Leaderboard"
+type: dataset
+authors:
+  - name: "Sthānika AI"
+    url: "https://sthanika.ai"
+repository-code: "https://github.com/sthanika-ai/Indic-Agri-Benchmark-Model-Configs"
+url: "https://sthanika.ai/research/indic-agri-advisory-2026"
+abstract: "Run configurations and the full leaderboard for the models evaluated on Indic-KCC-Agri-Advisory-Benchmark."
+license: MIT
+date-released: 2026-10-01
